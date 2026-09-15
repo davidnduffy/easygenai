@@ -1,0 +1,1 @@
+The goal of this project is to make it easy to run generative AI models locally and provide automated install, model download, and setup leveraging ComfyUI to remove the barriers to entry for local generative AI.
