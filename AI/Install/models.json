@@ -39,6 +39,38 @@
       "targetFolder": "3D",
       "requiresLicenseAcceptance": false,
       "installPriority": 5
+    },
+    {
+      "name": "ControlNet Canny",
+      "downloadMethod": "huggingface",
+      "repo": "lllyasviel/ControlNet-v1-1",
+      "targetFolder": "ControlNet",
+      "filePattern": "*canny*",
+      "installPriority": 10
+    },
+    {
+      "name": "ControlNet Depth",
+      "downloadMethod": "huggingface",
+      "repo": "lllyasviel/ControlNet-v1-1",
+      "targetFolder": "ControlNet",
+      "filePattern": "*depth*",
+      "installPriority": 11
+    },
+    {
+      "name": "ControlNet OpenPose",
+      "downloadMethod": "huggingface",
+      "repo": "lllyasviel/ControlNet-v1-1",
+      "targetFolder": "ControlNet",
+      "filePattern": "*openpose*",
+      "installPriority": 12
+    },
+    {
+      "name": "ControlNet LineArt",
+      "downloadMethod": "huggingface",
+      "repo": "lllyasviel/ControlNet-v1-1",
+      "targetFolder": "ControlNet",
+      "filePattern": "*lineart*",
+      "installPriority": 13
     }
   ]
 }

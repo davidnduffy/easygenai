@@ -10,13 +10,13 @@ $Root = Split-Path $PSScriptRoot -Parent
 # ------------------------------------------------
 
 $MinPythonVersion = [Version]"3.12.0"
-$MinGitVersion    = [Version]"2.45.0"
+$MinGitVersion = [Version]"2.45.0"
 
 # ------------------------------------------------
 # Helpers
 # ------------------------------------------------
 
-function Prompt-Upgrade {
+function Confirm-Upgrade {
     param(
         [string]$Software,
         [Version]$CurrentVersion,
@@ -29,12 +29,10 @@ function Prompt-Upgrade {
     Write-Host ""
 
     $response = Read-Host "Upgrade $Software? (Y/N)"
-
     return $response -match "^[Yy]"
 }
 
 function Get-PythonVersion {
-
     try {
         $ver = python --version 2>&1
 
@@ -42,13 +40,13 @@ function Get-PythonVersion {
             return [Version]$matches[1]
         }
     }
-    catch {}
+    catch {
+    }
 
     return $null
 }
 
 function Get-GitVersion {
-
     try {
         $ver = git --version
 
@@ -56,21 +54,19 @@ function Get-GitVersion {
             return [Version]$matches[1]
         }
     }
-    catch {}
+    catch {
+    }
 
     return $null
 }
 
 function Install-WithWinget {
-
     param(
         [string]$PackageId
     )
 
     $winget = Get-Command winget -ErrorAction SilentlyContinue
-
-    if(-not $winget)
-    {
+    if (-not $winget) {
         throw "Winget not installed."
     }
 
@@ -79,6 +75,49 @@ function Install-WithWinget {
         --exact `
         --accept-package-agreements `
         --accept-source-agreements
+
+    $env:Path = [System.Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path', 'User') + ';' + $env:Path
+}
+
+function Resolve-PythonExecutable {
+    $candidates = @(
+        (Get-Command py -ErrorAction SilentlyContinue).Source,
+        (Get-Command python -ErrorAction SilentlyContinue).Source,
+        (Join-Path $env:LOCALAPPDATA 'Programs\Python\Python312\python.exe'),
+        (Join-Path $env:ProgramFiles 'Python312\python.exe'),
+        'python'
+    )
+
+    foreach ($candidate in $candidates) {
+        if (-not $candidate) { continue }
+        if (Test-Path $candidate -PathType Leaf -ErrorAction SilentlyContinue) {
+            return $candidate
+        }
+    }
+
+    return $null
+}
+
+function Resolve-VenvTool {
+    param(
+        [string]$ToolName,
+        [string]$VenvRoot
+    )
+
+    $VenvBin = Join-Path $VenvRoot 'Scripts'
+    $Candidates = @(
+        (Join-Path $VenvBin "$ToolName.exe"),
+        (Join-Path $VenvBin $ToolName),
+        (Join-Path $VenvBin "$ToolName.cmd")
+    )
+
+    foreach ($Candidate in $Candidates) {
+        if (Test-Path $Candidate -PathType Leaf -ErrorAction SilentlyContinue) {
+            return $Candidate
+        }
+    }
+
+    return $null
 }
 
 # ------------------------------------------------
@@ -87,27 +126,21 @@ function Install-WithWinget {
 
 $PythonVersion = Get-PythonVersion
 
-if(-not $PythonVersion)
-{
+if (-not $PythonVersion) {
     Write-Host ""
     Write-Host "Python not found."
     Write-Host "Installing Python 3.12..."
-
     Install-WithWinget "Python.Python.3.12"
 }
-elseif($PythonVersion -lt $MinPythonVersion)
-{
-    if(Prompt-Upgrade "Python" $PythonVersion $MinPythonVersion)
-    {
+elseif ($PythonVersion -lt $MinPythonVersion) {
+    if (Confirm-Upgrade "Python" $PythonVersion $MinPythonVersion) {
         Install-WithWinget "Python.Python.3.12"
     }
-    else
-    {
+    else {
         Write-Warning "Continuing with older Python."
     }
 }
-else
-{
+else {
     Write-Host "Python $PythonVersion OK"
 }
 
@@ -117,44 +150,41 @@ else
 
 $GitVersion = Get-GitVersion
 
-if(-not $GitVersion)
-{
+if (-not $GitVersion) {
     Write-Host ""
     Write-Host "Git not found."
     Write-Host "Installing Git..."
-
     Install-WithWinget "Git.Git"
 }
-elseif($GitVersion -lt $MinGitVersion)
-{
-    if(Prompt-Upgrade "Git" $GitVersion $MinGitVersion)
-    {
+elseif ($GitVersion -lt $MinGitVersion) {
+    if (Confirm-Upgrade "Git" $GitVersion $MinGitVersion) {
         Install-WithWinget "Git.Git"
     }
-    else
-    {
+    else {
         Write-Warning "Continuing with older Git."
     }
 }
-else
-{
+else {
     Write-Host "Git $GitVersion OK"
 }
 
 # Refresh PATH for current session
-
 $env:Path += ";C:\Program Files\Git\bin"
 $env:Path += ";$env:LOCALAPPDATA\Programs\Python\Python312"
 $env:Path += ";$env:LOCALAPPDATA\Programs\Python\Python312\Scripts"
 
+$PythonExe = Resolve-PythonExecutable
+if (-not $PythonExe) {
+    throw "Python 3.12 was not found after installation."
+}
 
 # ------------------------------------------------
 # AI Setup
 # ------------------------------------------------
 
 $ComfyUIPath = Join-Path $Root "ComfyUI"
-$ModelsPath  = Join-Path $Root "Models"
-$LaunchPath  = Join-Path $Root "Launch"
+$ModelsPath = Join-Path $Root "Models"
+$LaunchPath = Join-Path $Root "Launch"
 
 Write-Host ""
 Write-Host "Creating folders..."
@@ -163,15 +193,14 @@ $folders = @(
     $ComfyUIPath,
     $ModelsPath,
     $LaunchPath,
-    "$ModelsPath\Checkpoints",
-    "$ModelsPath\Flux",
-    "$ModelsPath\Loras",
-    "$ModelsPath\ControlNet",
-    "$ModelsPath\3D"
+    (Join-Path $ModelsPath 'Checkpoints'),
+    (Join-Path $ModelsPath 'Flux'),
+    (Join-Path $ModelsPath 'Loras'),
+    (Join-Path $ModelsPath 'ControlNet'),
+    (Join-Path $ModelsPath '3D')
 )
 
-foreach($folder in $folders)
-{
+foreach ($folder in $folders) {
     New-Item -ItemType Directory -Path $folder -Force | Out-Null
 }
 
@@ -180,31 +209,27 @@ foreach($folder in $folders)
 # ------------------------------------------------
 
 function Test-Command {
-    param($Name)
+    param(
+        [string]$Name
+    )
 
-    if(-not (Get-Command $Name -ErrorAction SilentlyContinue))
-    {
+    if (-not (Get-Command $Name -ErrorAction SilentlyContinue)) {
         throw "$Name not installed."
     }
 }
 
 Write-Host "Checking prerequisites..."
-
 Test-Command git
 
 # ------------------------------------------------
 # Clone ComfyUI
 # ------------------------------------------------
 
-if(-not (Test-Path "$ComfyUIPath\.git"))
-{
+if (-not (Test-Path "$ComfyUIPath\.git")) {
     Write-Host "Cloning ComfyUI..."
-
-    git clone https://github.com/comfyanonymous/ComfyUI.git `
-        $ComfyUIPath
+    git clone https://github.com/comfyanonymous/ComfyUI.git $ComfyUIPath
 }
-else
-{
+else {
     Write-Host "ComfyUI already exists."
 }
 
@@ -212,11 +237,9 @@ else
 # Python VENV
 # ------------------------------------------------
 
-if(-not (Test-Path "$ComfyUIPath\venv"))
-{
+if (-not (Test-Path "$ComfyUIPath\venv")) {
     Write-Host "Creating Python environment..."
-
-    python -m venv "$ComfyUIPath\venv"
+    & $PythonExe -m venv "$ComfyUIPath\venv"
 }
 
 $Python = "$ComfyUIPath\venv\Scripts\python.exe"
@@ -233,9 +256,7 @@ $Python = "$ComfyUIPath\venv\Scripts\python.exe"
 
 Write-Host "Installing CUDA PyTorch..."
 
-& $Python -m pip install `
-torch torchvision torchaudio `
---index-url https://download.pytorch.org/whl/cu128
+& $Python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
 
 # ------------------------------------------------
 # Install ComfyUI-Manager
@@ -244,30 +265,20 @@ torch torchvision torchaudio `
 Write-Host ""
 Write-Host "Installing ComfyUI-Manager..."
 
-$ManagerPath =
-"$ComfyUIPath\custom_nodes\ComfyUI-Manager"
+$ManagerPath = Join-Path $ComfyUIPath 'custom_nodes\ComfyUI-Manager'
 
-if(-not (Test-Path $ManagerPath))
-{
-    git clone `
-    https://github.com/ltdrdata/ComfyUI-Manager.git `
-    $ManagerPath
+if (-not (Test-Path $ManagerPath)) {
+    git clone https://github.com/ltdrdata/ComfyUI-Manager.git $ManagerPath
 }
-else
-{
+else {
     Write-Host "ComfyUI-Manager already installed."
 }
 
-$ManagerConfig =
-"$ManagerPath"
-
-if(Test-Path $ManagerConfig)
-{
+if (Test-Path $ManagerPath) {
     Write-Host ""
-    Write-Host "✓ ComfyUI-Manager installed"
+    Write-Host "ComfyUI-Manager installed"
 }
-else
-{
+else {
     throw "ComfyUI-Manager installation failed."
 }
 
@@ -275,16 +286,12 @@ else
 # Install ComfyUI-Manager Requirements
 # ------------------------------------------------
 
-$ManagerRequirements =
-"$ManagerPath\requirements.txt"
+$ManagerRequirements = Join-Path $ManagerPath 'requirements.txt'
 
-if(Test-Path $ManagerRequirements)
-{
+if (Test-Path $ManagerRequirements) {
     Write-Host ""
     Write-Host "Installing ComfyUI-Manager dependencies..."
-
-    & $Python -m pip install `
-        -r $ManagerRequirements
+    & $Python -m pip install -r $ManagerRequirements
 }
 
 # ------------------------------------------------
@@ -294,15 +301,12 @@ if(Test-Path $ManagerRequirements)
 Write-Host ""
 Write-Host "Installing configured custom nodes..."
 
-$NodeInstaller =
-Join-Path $PSScriptRoot "install_nodes.ps1"
+$NodeInstaller = Join-Path $PSScriptRoot 'install_nodes.ps1'
 
-if(Test-Path $NodeInstaller)
-{
+if (Test-Path $NodeInstaller) {
     & $NodeInstaller
 }
-else
-{
+else {
     Write-Warning "install_nodes.ps1 not found."
 }
 
@@ -310,62 +314,74 @@ else
 # extra_model_paths.yaml
 # ------------------------------------------------
 
-$Yaml = @"
-checkpoints:
-  - ../Models/Checkpoints
+$YamlLines = @(
+    'checkpoints:',
+    '  - ../Models/Checkpoints',
+    '',
+    'loras:',
+    '  - ../Models/Loras',
+    '',
+    'controlnet:',
+    '  - ../Models/ControlNet',
+    '',
+    'diffusion_models:',
+    '  - ../Models/Flux',
+    '',
+    'vae:',
+    '  - ../Models/VAE'
+)
 
-loras:
-  - ../Models/Loras
+$YamlPath = Join-Path $ComfyUIPath 'extra_model_paths.yaml'
+$YamlLines | Set-Content -Path $YamlPath -Encoding UTF8
 
-controlnet:
-  - ../Models/ControlNet
-
-diffusion_models:
-  - ../Models/Flux
-
-vae:
-  - ../Models/VAE
-"@
-
-$Yaml |
-Set-Content `
-"$ComfyUIPath\extra_model_paths.yaml"
-
-#------------------------------------------------
+# ------------------------------------------------
 # HuggingFace CLI
-#------------------------------------------------
+# ------------------------------------------------
 
 Write-Host "Installing HuggingFace CLI..."
-
-& $Python -m pip install `
-    --upgrade `
-    huggingface_hub[cli]
+& $Python -m pip install --upgrade "huggingface_hub[cli]"
 
 Write-Host ""
 Write-Host "If this is your first install,"
 Write-Host "login to Hugging Face."
 
-huggingface-cli login
+$HfCli = Resolve-VenvTool -ToolName 'hf' -VenvRoot (Join-Path $ComfyUIPath 'venv')
+
+if ($HfCli) {
+    & $HfCli auth login
+}
+else {
+    Write-Warning "hf CLI not found in venv. Trying module fallback..."
+    & $Python -m huggingface_hub.commands.hf auth login
+}
+
+# ------------------------------------------------
+# Install Models
+# ------------------------------------------------
+
+Write-Host ""
+Write-Host "Installing models..."
+
+$ModelInstaller = Join-Path $PSScriptRoot 'install_models.ps1'
+& $ModelInstaller
 
 # ------------------------------------------------
 # Launcher
 # ------------------------------------------------
 
-$Launcher = @"
-cd /d `"$ComfyUIPath`"
+$LauncherPath = Join-Path $LaunchPath 'Launch_ComfyUI.bat'
+$LauncherLines = @(
+    'cd /d "' + $ComfyUIPath + '"',
+    '',
+    'call venv\Scripts\activate',
+    '',
+    'python main.py'
+)
 
-call venv\Scripts\activate
-
-python main.py
-"@
-
-$Launcher |
-Out-File `
-"$LaunchPath\Launch_ComfyUI.bat" `
--Encoding ascii
+$LauncherLines | Set-Content -Path $LauncherPath -Encoding ASCII
 
 Write-Host ""
 Write-Host "Setup Complete"
 Write-Host ""
 Write-Host "Launch:"
-Write-Host "$LaunchPath\Launch_ComfyUI.bat"
+Write-Host $LauncherPath
