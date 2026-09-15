@@ -1,0 +1,44 @@
+{
+  "models": [
+    {
+      "name": "FLUX.1 Dev",
+      "downloadMethod": "huggingface",
+      "repo": "black-forest-labs/FLUX.1-dev",
+      "targetFolder": "Flux",
+      "requiresLicenseAcceptance": true,
+      "installPriority": 1
+    },
+    {
+      "name": "Juggernaut XL",
+      "downloadMethod": "huggingface",
+      "repo": "RunDiffusion/Juggernaut-XL",
+      "targetFolder": "Checkpoints",
+      "requiresLicenseAcceptance": false,
+      "installPriority": 2
+    },
+    {
+      "name": "RealVisXL V5",
+      "downloadMethod": "huggingface",
+      "repo": "SG161222/RealVisXL_V5.0",
+      "targetFolder": "Checkpoints",
+      "requiresLicenseAcceptance": false,
+      "installPriority": 3
+    },
+    {
+      "name": "Stable Fast 3D",
+      "downloadMethod": "huggingface",
+      "repo": "stabilityai/stable-fast-3d",
+      "targetFolder": "3D",
+      "requiresLicenseAcceptance": true,
+      "installPriority": 4
+    },
+    {
+      "name": "TripoSR",
+      "downloadMethod": "huggingface",
+      "repo": "stabilityai/TripoSR",
+      "targetFolder": "3D",
+      "requiresLicenseAcceptance": false,
+      "installPriority": 5
+    }
+  ]
+}

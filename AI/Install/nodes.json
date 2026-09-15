@@ -1,0 +1,20 @@
+{
+    "repositories": [
+        {
+            "name": "ComfyUI-Impact-Pack",
+            "url": "https://github.com/ltdrdata/ComfyUI-Impact-Pack.git"
+        },
+        {
+            "name": "ComfyUI_essentials",
+            "url": "https://github.com/cubiq/ComfyUI_essentials.git"
+        },
+        {
+            "name": "rgthree-comfy",
+            "url": "https://github.com/rgthree/rgthree-comfy.git"
+        },
+        {
+            "name": "Comfyroll_CustomNodes",
+            "url": "https://github.com/Suzie1/ComfyUI_Comfyroll_CustomNodes.git"
+        }
+    ]
+}
