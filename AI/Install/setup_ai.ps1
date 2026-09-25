@@ -197,7 +197,8 @@ $folders = @(
     (Join-Path $ModelsPath 'Flux'),
     (Join-Path $ModelsPath 'Loras'),
     (Join-Path $ModelsPath 'ControlNet'),
-    (Join-Path $ModelsPath '3D')
+    (Join-Path $ModelsPath '3D'),
+    (Join-Path $ModelsPath 'VAE')
 )
 
 foreach ($folder in $folders) {
@@ -249,6 +250,13 @@ $Python = "$ComfyUIPath\venv\Scripts\python.exe"
 # ------------------------------------------------
 
 & $Python -m pip install --upgrade pip
+
+# ------------------------------------------------
+# Install ComfyUI Requirements
+# ------------------------------------------------
+
+Write-Host "Installing ComfyUI requirements..."
+& $Python -m pip install -r (Join-Path $ComfyUIPath 'requirements.txt')
 
 # ------------------------------------------------
 # Install PyTorch CUDA
@@ -315,20 +323,13 @@ else {
 # ------------------------------------------------
 
 $YamlLines = @(
-    'checkpoints:',
-    '  - ../Models/Checkpoints',
-    '',
-    'loras:',
-    '  - ../Models/Loras',
-    '',
-    'controlnet:',
-    '  - ../Models/ControlNet',
-    '',
-    'diffusion_models:',
-    '  - ../Models/Flux',
-    '',
-    'vae:',
-    '  - ../Models/VAE'
+    'easygenai:',
+    '  base_path: ../Models',
+    '  checkpoints: Checkpoints',
+    '  loras: Loras',
+    '  controlnet: ControlNet',
+    '  diffusion_models: Flux',
+    '  vae: VAE'
 )
 
 $YamlPath = Join-Path $ComfyUIPath 'extra_model_paths.yaml'
@@ -371,14 +372,12 @@ $ModelInstaller = Join-Path $PSScriptRoot 'install_models.ps1'
 
 $LauncherPath = Join-Path $LaunchPath 'Launch_ComfyUI.bat'
 $LauncherLines = @(
-    'cd /d "' + $ComfyUIPath + '"',
-    '',
-    'call venv\Scripts\activate',
-    '',
-    'python main.py'
+    '@echo off',
+    'cd /d "%~dp0..\ComfyUI" || exit /b 1',
+    '"venv\Scripts\python.exe" main.py'
 )
 
-$LauncherLines | Set-Content -Path $LauncherPath -Encoding ASCII
+[System.IO.File]::WriteAllLines($LauncherPath, $LauncherLines, [System.Text.Encoding]::ASCII)
 
 Write-Host ""
 Write-Host "Setup Complete"

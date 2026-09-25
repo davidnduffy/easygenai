@@ -41,6 +41,14 @@
       "installPriority": 5
     },
     {
+      "name": "Hunyuan3D-2.1",
+      "downloadMethod": "huggingface",
+      "repo": "tencent/Hunyuan3D-2.1",
+      "targetFolder": "3D",
+      "requiresLicenseAcceptance": false,
+      "installPriority": 6
+    },
+    {
       "name": "ControlNet Canny",
       "downloadMethod": "huggingface",
       "repo": "lllyasviel/ControlNet-v1-1",

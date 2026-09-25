@@ -1,1 +1,3 @@
-cd /d "C:\Dev\Hackathon\easygenai\AI\ComfyUI"  call venv\Scripts\activate  python main.py
+@echo off
+cd /d "%~dp0..\ComfyUI" || exit /b 1
+"venv\Scripts\python.exe" main.py
