@@ -43,8 +43,9 @@
     {
       "name": "Hunyuan3D-2.1",
       "downloadMethod": "huggingface",
-      "repo": "tencent/Hunyuan3D-2.1",
-      "targetFolder": "3D",
+      "repo": "Comfy-Org/hunyuan3D_2.1_repackaged",
+      "targetPath": "ComfyUI/models/checkpoints",
+      "filePattern": "hunyuan_3d_v2.1.safetensors",
       "requiresLicenseAcceptance": false,
       "installPriority": 6
     },

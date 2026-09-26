@@ -73,20 +73,23 @@ print(info.sha or '')
 
 function Get-ModelMetadataPath {
     param(
-        [string]$TargetFolder
+        [string]$TargetFolder,
+        [string]$ModelName
     )
 
-    return Join-Path $TargetFolder '.easygenai-model.json'
+    $SafeModelName = $ModelName -replace '[^A-Za-z0-9._-]', '_'
+    return Join-Path $TargetFolder ".easygenai-model-$SafeModelName.json"
 }
 
 function Save-ModelMetadata {
     param(
         [string]$TargetFolder,
+        [string]$ModelName,
         [string]$RepoId,
         [string]$Revision
     )
 
-    $MetadataPath = Get-ModelMetadataPath -TargetFolder $TargetFolder
+    $MetadataPath = Get-ModelMetadataPath -TargetFolder $TargetFolder -ModelName $ModelName
     $Payload = [ordered]@{
         repo = $RepoId
         revision = $Revision
@@ -105,10 +108,12 @@ function Download-HuggingFaceModel
         $Model
     )
 
-    $TargetFolder =
-        Join-Path `
-        $ModelsRoot `
-        $Model.targetFolder
+    if ($Model.targetPath) {
+        $TargetFolder = Join-Path $AIRoot $Model.targetPath
+    }
+    else {
+        $TargetFolder = Join-Path $ModelsRoot $Model.targetFolder
+    }
 
     New-Item `
         -ItemType Directory `
@@ -133,7 +138,7 @@ function Download-HuggingFaceModel
 
     $VenvPython = Join-Path $ComfyUIRoot 'venv\Scripts\python.exe'
     $HfCli = Resolve-VenvTool -ToolName 'hf' -VenvRoot (Join-Path $ComfyUIRoot 'venv')
-    $MetadataPath = Get-ModelMetadataPath -TargetFolder $TargetFolder
+    $MetadataPath = Get-ModelMetadataPath -TargetFolder $TargetFolder -ModelName $Model.name
 
     if (Test-Path $MetadataPath) {
         try {
@@ -149,31 +154,29 @@ function Download-HuggingFaceModel
         }
     }
 
-    $FilesInTarget = Get-ChildItem -Path $TargetFolder -Force -ErrorAction SilentlyContinue
-    if ($FilesInTarget -and $FilesInTarget.Count -gt 0) {
-        $CurrentRevision = Get-RepoRevision -RepoId $Model.repo -PythonExe $VenvPython
-        if ($CurrentRevision) {
-            $Metadata = Get-Content $MetadataPath -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json -ErrorAction SilentlyContinue
-            if ($Metadata -and $Metadata.repo -eq $Model.repo -and $Metadata.revision -eq $CurrentRevision) {
-                Write-Host "Skipping $($Model.name): target folder already matches current revision."
-                return
-            }
-        }
-    }
-
     $LastError = $null
     for ($Attempt = 1; $Attempt -le 3; $Attempt++) {
         try {
+            $DownloadArguments = @(
+                'download',
+                $Model.repo,
+                '--repo-type', 'model',
+                '--local-dir', $TargetFolder
+            )
+            if ($Model.filePattern) {
+                $DownloadArguments += @('--include', $Model.filePattern)
+            }
+
             if ($HfCli) {
-                & $HfCli download $Model.repo --repo-type model --local-dir $TargetFolder
+                & $HfCli @DownloadArguments
             }
             else {
-                & $VenvPython -m huggingface_hub.commands.hf download $Model.repo --repo-type model --local-dir $TargetFolder
+                & $VenvPython -m huggingface_hub.commands.hf @DownloadArguments
             }
 
             $FinalRevision = Get-RepoRevision -RepoId $Model.repo -PythonExe $VenvPython
             if ($FinalRevision) {
-                Save-ModelMetadata -TargetFolder $TargetFolder -RepoId $Model.repo -Revision $FinalRevision
+                Save-ModelMetadata -TargetFolder $TargetFolder -ModelName $Model.name -RepoId $Model.repo -Revision $FinalRevision
             }
 
             return

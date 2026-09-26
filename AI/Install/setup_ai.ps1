@@ -340,7 +340,7 @@ $YamlLines | Set-Content -Path $YamlPath -Encoding UTF8
 # ------------------------------------------------
 
 Write-Host "Installing HuggingFace CLI..."
-& $Python -m pip install --upgrade "huggingface_hub[cli]"
+& $Python -m pip install --upgrade "huggingface_hub[cli]>=1.5.0,<2.0"
 
 Write-Host ""
 Write-Host "If this is your first install,"
